@@ -1,11 +1,14 @@
 import csv
 from pprint import pprint
+
 from sklearn import linear_model
 
 import matplotlib.pyplot as plt
-from scipy.stats import pearsonr
-from sklearn.metrics import matthews_corrcoef, mean_squared_error
+from scipy.stats import pearsonr, sem
+import statsmodels.api as sm
+from sklearn.metrics import matthews_corrcoef, mean_squared_error, r2_score
 from sklearn import linear_model
+
 target = "Price"
 
 
@@ -13,6 +16,14 @@ def remove_key(d, key):
     r = dict(d)
     del r[key]
     return r
+
+
+def get_pvalues(X, y):
+    X2 = sm.add_constant(X)
+    est = sm.OLS(y, X2)
+    est2 = est.fit()
+    print(est2.summary())
+    return est2.pvalues
 
 
 # Read the CSV file
@@ -50,8 +61,8 @@ for key in header:
         plt.title("{} scatter".format(key))
         # plt.show()
         plt.savefig("scatter/{}_scatter.png".format(key), bbox_inches='tight', dpi=fig.dpi)
-        R, _ = pearsonr(variables , target_data)
-        corr.append({key:R})
+        R, _ = pearsonr(variables, target_data)
+        corr.append({key: R})
         # v += 1
 
 # plt.show()
@@ -61,10 +72,29 @@ pprint(corr)
 
 reg = linear_model.LinearRegression()
 
-reg.fit([list(x.values()) for x in predictor_data] , target_data)
+reg.fit([list(x.values()) for x in predictor_data], target_data)
+
 # mean_squared_error()
+predicted_data = reg.predict([list(x.values()) for x in predictor_data])
 
 pprint(reg.coef_)
 pprint(reg.intercept_)
+pprint(sem(predicted_data))
+r2 = r2_score(target_data, predicted_data)
+pprint(r2)
+
+n = len(predicted_data)
+p = len(header) - 1
+
+ar2 = 1 - ((1 - r2) * (n - 1) / (n - p - 1))
+pprint(ar2)
+
+# corr of observed and predicted
+R, _ = pearsonr(target_data, predicted_data)
+pprint(R)
+# p-values
+pprint(get_pvalues([list(x.values()) for x in predictor_data] , target_data))
+
+
 
 print("ss")
